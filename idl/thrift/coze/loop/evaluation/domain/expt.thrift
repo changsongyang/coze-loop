@@ -366,6 +366,7 @@ struct ExptAggregateResult {
     2: optional map<i64, EvaluatorAggregateResult> evaluator_results (go.tag = 'json:"evaluator_results"')
     3: optional ExptAggregateCalculateStatus status
     4: optional map<i64, AnnotationAggregateResult> annotation_results (go.tag = 'json:"annotation_results"')    // tag_key_id -> result
+    5: optional EvalTargetAggregateResult eval_target_aggr_result
 }
 
 struct EvalTargetAggregateResult {
