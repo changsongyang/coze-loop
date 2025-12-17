@@ -370,9 +370,13 @@ struct ExptAggregateResult {
 }
 
 struct EvalTargetAggregateResult {
-    1: required i64 target_id (api.js_conv = 'true', go.tag = 'json:"target_id"')
-    2: optional list<AggregatorResult> aggregator_results
-    3: optional string name
+    1: optional i64 target_id (api.js_conv = 'true')
+    2: optional i64 target_version_id (api.js_conv = 'true')
+
+    5: optional list<AggregatorResult> latency
+    6: optional list<AggregatorResult> input_tokens
+    7: optional list<AggregatorResult> output_tokens
+    8: optional list<AggregatorResult> total_tokens
 }
 
 // 评估器版本粒度聚合结果
