@@ -12,6 +12,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/sonic"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel/litellm"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel/open_inference"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 
@@ -135,7 +136,7 @@ var (
 			DataType:     dataTypeInt64,
 		},
 		tracespec.Stream: {
-			AttributeKey: []string{otelAttributeModelStream},
+			AttributeKey: []string{otelAttributeModelStream, liteLlmAttributeModelStream},
 			IsTag:        true,
 			DataType:     dataTypeBool,
 		},
@@ -317,7 +318,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 			} else {
 				switch fieldKey {
 				case "span_type":
-					spanType = spanTypeMapping(value)
+					spanType = value
 				case "input":
 					input = value
 				case "output":
@@ -386,7 +387,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 		CallType:         "Custom",
 		WorkspaceID:      spaceID,
 		SpanName:         span.Name,
-		SpanType:         spanType,
+		SpanType:         spanTypeMapping(spanType, span.Name),
 		Method:           "",
 		StatusCode:       statusCode,
 		Input:            input,
@@ -414,7 +415,10 @@ func setLogID(span *LoopSpan) {
 	delete(span.TagsString, "logid")
 }
 
-func spanTypeMapping(spanType string) string {
+func spanTypeMapping(spanType, spanName string) string {
+	if spanName == liteLlmSpanNameRequest {
+		return "model"
+	}
 	desSpanType, ok := otelModelSpanTypeMap[spanType]
 	if ok {
 		spanType = desSpanType
@@ -613,6 +617,7 @@ func processAttributeKey(ctx context.Context, conf FieldConf, attributeMap map[s
 }
 
 func processAttributePrefix(ctx context.Context, fieldKey string, conf FieldConf, attributeMap map[string]*AnyValue) string {
+	var err error
 	for _, attributePrefixKey := range conf.AttributeKeyPrefix {
 		srcAttrAggrRes := aggregateAttributesByPrefix(attributeMap, attributePrefixKey)
 		if srcAttrAggrRes == nil {
@@ -643,10 +648,16 @@ func processAttributePrefix(ctx context.Context, fieldKey string, conf FieldConf
 					if tools != nil {
 						temp["tools"] = tools
 						toBeMarshalObject = temp
+					} else {
+						srcTools := aggregateAttributesByPrefix(attributeMap, liteLlmAttributeModelInputTools) // litellm
+						toBeMarshalObject, err = litellm.AddTools2ModelInput(toBeMarshalObject, srcTools)
+						if err != nil {
+							continue
+						}
 					}
 				}
 			}
-		case openInferenceAttributeModelInputMessages: // openInference input message
+		case openInferenceAttributeModelInputMessages: // openInference(or litellm) input message
 			srcInput, err := open_inference.ConvertToModelInput(srcAttrAggrRes)
 			if err != nil {
 				continue
