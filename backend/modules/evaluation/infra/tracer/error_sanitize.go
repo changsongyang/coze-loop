@@ -1,3 +1,6 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package tracer
 
 import "github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -37,4 +40,3 @@ func SanitizeErrorForTrace(err error) error {
 		msg:  err.Error(),
 	}
 }
-
